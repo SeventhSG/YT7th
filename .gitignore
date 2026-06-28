@@ -5,6 +5,7 @@ venv/
 env/
 build/
 dist/
+*.zip
 *.spec.bak
 *.db
 settings.json
