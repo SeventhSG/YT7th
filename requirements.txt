@@ -1,0 +1,5 @@
+# [default] pulls yt-dlp-ejs, the JS challenge solver scripts YouTube now
+# requires. A JS runtime (Node, Deno, or Bun) must also be installed.
+yt-dlp[default]>=2026.6.9
+customtkinter>=5.2.0
+Pillow>=10.0.0
