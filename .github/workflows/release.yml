@@ -20,9 +20,10 @@ jobs:
         include:
           - os: windows-latest
             artifact: YT7th-windows.zip
-          - os: macos-13
+          - os: macos-14
             artifact: YT7th-macos.zip
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
 
@@ -63,8 +64,8 @@ jobs:
           unzip -o ffmpeg.zip -d bin
           unzip -o ffprobe.zip -d bin
           chmod +x bin/ffmpeg bin/ffprobe
-          # Deno
-          curl -L -o deno.zip https://github.com/denoland/deno/releases/latest/download/deno-x86_64-apple-darwin.zip
+          # Deno (arm64, native on Apple Silicon)
+          curl -L -o deno.zip https://github.com/denoland/deno/releases/latest/download/deno-aarch64-apple-darwin.zip
           unzip -o deno.zip -d bin
           chmod +x bin/deno
           # Generate .icns from logo.png

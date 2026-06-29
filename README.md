@@ -66,13 +66,13 @@ Grab the latest build from the [Releases page](https://github.com/SeventhSG/YT7t
 2. Extract the folder anywhere
 3. Run `YT7th.exe`
 
-### macOS (Intel & Apple Silicon)
+### macOS (Apple Silicon)
 
 1. Download `YT7th-macos.zip`
 2. Unzip and move `YT7th.app` to **Applications**
 3. The app is **unsigned**, so the first launch is blocked by Gatekeeper. **Right-click the app -> Open -> Open**, or run `xattr -cr /Applications/YT7th.app` once in Terminal. After that it launches normally.
 
-> The macOS build is x86_64 and runs natively on Intel Macs and on Apple Silicon via Rosetta 2 (installs automatically on first launch if needed).
+> The macOS build is arm64 and runs natively on Apple Silicon Macs (M1 and newer). The bundled FFmpeg may use Rosetta 2 for the merge/convert step; if a merge fails on a fresh machine, install it once with `softwareupdate --install-rosetta --agree-to-license`. Intel Macs are not currently supported by the prebuilt app (build from source instead).
 
 ## Requirements
 
