@@ -2,10 +2,23 @@
 import json
 import os
 import sqlite3
+import sys
 from datetime import datetime
 from pathlib import Path
 
-APP_DIR = Path(os.getenv("APPDATA", Path.home())) / "YT7th"
+
+def app_data_dir():
+    """Per-user app-data directory, following each OS's convention."""
+    if sys.platform == "win32":
+        base = Path(os.getenv("APPDATA", Path.home()))
+    elif sys.platform == "darwin":
+        base = Path.home() / "Library" / "Application Support"
+    else:
+        base = Path(os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+    return base / "YT7th"
+
+
+APP_DIR = app_data_dir()
 APP_DIR.mkdir(parents=True, exist_ok=True)
 
 SETTINGS_PATH = APP_DIR / "settings.json"

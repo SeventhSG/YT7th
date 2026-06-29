@@ -10,7 +10,7 @@ Built with Python, yt-dlp, and customtkinter.
 
 [![Release](https://img.shields.io/github/v/release/SeventhSG/YT7th?include_prereleases&color=9b0e0e&label=release)](https://github.com/SeventhSG/YT7th/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-9b0e0e.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows-9b0e0e.svg)](https://github.com/SeventhSG/YT7th/releases)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-9b0e0e.svg)](https://github.com/SeventhSG/YT7th/releases)
 [![Python](https://img.shields.io/badge/python-3.11%2B-9b0e0e.svg)](https://www.python.org/)
 [![Powered by yt-dlp](https://img.shields.io/badge/powered%20by-yt--dlp-9b0e0e.svg)](https://github.com/yt-dlp/yt-dlp)
 [![Downloads](https://img.shields.io/github/downloads/SeventhSG/YT7th/total?color=9b0e0e&label=downloads)](https://github.com/SeventhSG/YT7th/releases)
@@ -25,12 +25,12 @@ Built with Python, yt-dlp, and customtkinter.
 
 - [Intended use](#intended-use)
 - [Features](#features)
-- [Download (Windows)](#download-windows)
+- [Download (Windows & macOS)](#download-windows--macos)
 - [Requirements](#requirements)
 - [Install from source](#install-from-source)
 - [How to use](#how-to-use)
 - [Authentication (member-only and private videos)](#authentication-member-only-and-private-videos)
-- [Build a standalone .exe](#build-a-standalone-exe)
+- [Build a standalone app](#build-a-standalone-app)
 - [Project layout](#project-layout)
 - [Troubleshooting](#troubleshooting)
 - [FAQ](#faq)
@@ -53,17 +53,26 @@ YT7th is for **personal archival only** - saving videos for your own offline use
 - **Friendly error messages** - plain language instead of raw stack traces
 - **Dark modern UI** with a left sidebar and dark red accent
 - **Low disk space guard** - warns before a merge would fail
-- **Packaged as a single .exe** for easy distribution
+- **In-app update notifier** - tells you when a newer release is out
+- **Packaged for Windows and macOS** with **FFmpeg and a JS runtime bundled** - the prebuilt apps run on a clean machine, nothing else to install
 
-## Download (Windows)
+## Download (Windows & macOS)
 
-Grab the latest build from the [Releases page](https://github.com/SeventhSG/YT7th/releases):
+Grab the latest build from the [Releases page](https://github.com/SeventhSG/YT7th/releases). FFmpeg and a JavaScript runtime are **bundled** in the prebuilt apps - no separate install needed.
 
-1. Download `YT7th-vX.Y-windows.zip`
+### Windows
+
+1. Download `YT7th-windows.zip`
 2. Extract the folder anywhere
 3. Run `YT7th.exe`
 
-You still need FFmpeg and a JavaScript runtime installed (see [Requirements](#requirements)).
+### macOS (Intel & Apple Silicon)
+
+1. Download `YT7th-macos.zip`
+2. Unzip and move `YT7th.app` to **Applications**
+3. The app is **unsigned**, so the first launch is blocked by Gatekeeper. **Right-click the app -> Open -> Open**, or run `xattr -cr /Applications/YT7th.app` once in Terminal. After that it launches normally.
+
+> The macOS build is x86_64 and runs natively on Intel Macs and on Apple Silicon via Rosetta 2 (installs automatically on first launch if needed).
 
 ## Requirements
 
@@ -72,6 +81,8 @@ You still need FFmpeg and a JavaScript runtime installed (see [Requirements](#re
 | **Python 3.11+** | Running from source | [python.org](https://www.python.org/) |
 | **FFmpeg** (on PATH) | Merges video + audio, extracts audio | [ffmpeg.org](https://ffmpeg.org/) |
 | **A JavaScript runtime** (on PATH) | YouTube requires solving a JS challenge to release video streams | [Node.js 22+](https://nodejs.org/) (recommended), [Deno](https://deno.com/), or Bun |
+
+> These apply only when **running from source**. The prebuilt Windows and macOS downloads bundle FFmpeg and Deno already.
 
 > **Why a JavaScript runtime?** YouTube serves real video streams only after a JavaScript "signature / n" challenge is solved. Without a runtime installed, only image storyboards are available and every download fails with "Requested format is not available". The EJS solver scripts that drive this ship with `yt-dlp[default]`, already pinned in `requirements.txt`. YT7th auto-detects whichever runtime is on your PATH.
 
@@ -120,14 +131,16 @@ Works even while the browser is open, and is immune to Chromium app-bound cookie
 
 Pick the browser you are logged into. On Windows you must **close the browser completely first** (it locks its cookie database while running). On Chrome / Brave v127+ this can also fail due to app-bound encryption, so the cookies file method is more reliable.
 
-## Build a standalone .exe
+## Build a standalone app
 
 ```bash
 pip install pyinstaller
 pyinstaller build.spec
 ```
 
-The packaged app appears in `dist/YT7th/`. The build bundles yt-dlp, the EJS solver scripts, and customtkinter assets. Note: the `.exe` still relies on FFmpeg and a JS runtime being installed on the target machine.
+On Windows the packaged app appears in `dist/YT7th/`; on macOS you get `dist/YT7th.app`. The build bundles yt-dlp, the EJS solver scripts, and customtkinter assets.
+
+To bundle FFmpeg and Deno into the app (so it runs on a clean machine), drop the matching executables into a top-level `bin/` directory before building - `ffmpeg`, `ffprobe`, `deno` (add `.exe` on Windows). This is exactly what the GitHub Actions release workflow (`.github/workflows/release.yml`) does automatically for both platforms; pushing a `vX.Y.Z` tag builds and publishes both downloads.
 
 ## Project layout
 
@@ -166,7 +179,7 @@ YT7th/
 No. It tries each download without any login data first, and only retries with your cookies if the video turns out to be gated.
 
 **Where are my settings and history stored?**
-In `%APPDATA%/YT7th` (`settings.json` and `history.db`). They are never committed or uploaded.
+`settings.json` and `history.db` live in a per-user app-data folder: `%APPDATA%\YT7th` on Windows, `~/Library/Application Support/YT7th` on macOS. They are never committed or uploaded.
 
 **Can it download a whole playlist?**
 Yes. Paste the playlist URL and it processes every entry.

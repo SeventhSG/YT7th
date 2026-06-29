@@ -1,10 +1,12 @@
 """Home view: URL input, options, download with progress and cancel."""
 import shutil
 import threading
+import webbrowser
 
 import customtkinter as ctk
 
 import data
+import updater
 from downloader import Downloader, QUALITY_MAP
 from ui import messages, theme
 
@@ -125,7 +127,46 @@ class HomeView(ctk.CTkFrame):
         )
         self.detail.grid(row=2, column=0, sticky="ew", padx=16, pady=(6, 14))
 
+        # Update banner (hidden until a newer release is found)
+        self.update_bar = ctk.CTkFrame(self, fg_color=theme.ACCENT_SOFT,
+                                       corner_radius=12, border_width=1,
+                                       border_color=theme.ACCENT)
+        self.update_bar.grid_columnconfigure(0, weight=1)
+        self.update_msg = ctk.CTkLabel(
+            self.update_bar, text="", text_color=theme.TEXT,
+            font=theme.BODY, anchor="w",
+        )
+        self.update_msg.grid(row=0, column=0, sticky="w", padx=14, pady=8)
+        self.update_btn = ctk.CTkButton(
+            self.update_bar, text="Download", width=100, height=30,
+            corner_radius=8, fg_color=theme.ACCENT,
+            hover_color=theme.ACCENT_HOVER, font=(theme.FONT, 12, "bold"),
+        )
+        self.update_btn.grid(row=0, column=1, padx=(0, 6), pady=8)
+        ctk.CTkButton(
+            self.update_bar, text="✕", width=30, height=30, corner_radius=8,
+            fg_color="transparent", hover_color=theme.CARD_HOVER,
+            text_color=theme.TEXT_DIM, font=(theme.FONT, 13),
+            command=self.update_bar.grid_remove,
+        ).grid(row=0, column=2, padx=(0, 10), pady=8)
+        self.update_bar.grid(row=5, column=0, sticky="ew", pady=(18, 0))
+        self.update_bar.grid_remove()
+
+        updater.check_async(self._on_update_check)
+
         self._toggle_audio()
+
+    def _on_update_check(self, result):
+        if not result:
+            return
+
+        def show():
+            self.update_msg.configure(
+                text=f"YT7th {result['version']} is available.")
+            self.update_btn.configure(
+                command=lambda: webbrowser.open(result["url"]))
+            self.update_bar.grid()
+        self.after(0, show)
 
     def _toggle_audio(self):
         if self.audio_var.get():

@@ -1,10 +1,11 @@
 """Main window with left sidebar navigation."""
 import os
-import sys
 
 import customtkinter as ctk
 from PIL import Image
 
+from version import __version__
+from resources import resource_path
 from ui import theme
 from ui.home import HomeView
 from ui.history import HistoryView
@@ -13,21 +14,15 @@ from ui.settings import SettingsView
 ctk.set_appearance_mode("dark")
 
 
-def asset_path(name):
-    """Resolve an asset path in dev and inside a PyInstaller bundle."""
-    base = getattr(sys, "_MEIPASS", os.path.abspath("."))
-    return os.path.join(base, "assets", name)
-
-
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("YT7th")
+        self.title(f"YT7th {__version__}")
         self.geometry("960x640")
         self.minsize(820, 560)
         self.configure(fg_color=theme.BG)
 
-        ico = asset_path("logo.ico")
+        ico = resource_path("assets", "logo.ico")
         if os.path.exists(ico):
             try:
                 self.iconbitmap(ico)
@@ -56,7 +51,7 @@ class App(ctk.CTk):
         bar.grid_propagate(False)
 
         # Logo mark, no wordmark
-        logo_path = asset_path("logo.png")
+        logo_path = resource_path("assets", "logo.png")
         if os.path.exists(logo_path):
             img = Image.open(logo_path)
             self.logo_img = ctk.CTkImage(img, size=(46, 46))

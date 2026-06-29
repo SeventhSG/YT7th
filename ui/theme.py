@@ -22,7 +22,14 @@ DANGER = "#c01414"
 BORDER = "#222229"
 BORDER_SOFT = "#1a1a20"
 
-FONT = "Segoe UI"
+import sys
+
+if sys.platform == "darwin":
+    FONT = "SF Pro Text"      # falls back to system UI font if unavailable
+elif sys.platform == "win32":
+    FONT = "Segoe UI"
+else:
+    FONT = "DejaVu Sans"
 
 # Type scale
 H1 = (FONT, 28, "bold")

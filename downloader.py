@@ -5,6 +5,7 @@ from pathlib import Path
 
 import yt_dlp
 
+import resources
 from auth import cookie_opts
 
 # JS runtimes yt-dlp can use to solve YouTube's signature/n challenge.
@@ -138,6 +139,10 @@ class Downloader:
         runtimes = detect_js_runtimes()
         if runtimes:
             opts["js_runtimes"] = runtimes
+
+        bundled = resources.bin_dir()
+        if os.path.isdir(bundled):
+            opts["ffmpeg_location"] = bundled
         if use_cookies:
             opts.update(cookie_opts(settings))
 

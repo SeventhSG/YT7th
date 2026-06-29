@@ -13,6 +13,7 @@ For personal archival use only.
 """
 import os
 import subprocess
+import sys
 
 SUPPORTED_BROWSERS = ["none", "chrome", "firefox", "edge", "brave"]
 
@@ -22,6 +23,14 @@ _PROC_NAMES = {
     "brave": "brave.exe",
     "edge": "msedge.exe",
     "firefox": "firefox.exe",
+}
+
+# macOS process names (matched against `pgrep -x`).
+_MAC_PROC_NAMES = {
+    "chrome": "Google Chrome",
+    "brave": "Brave Browser",
+    "edge": "Microsoft Edge",
+    "firefox": "firefox",
 }
 
 
@@ -42,17 +51,31 @@ def cookie_opts(settings):
 
 
 def browser_running(browser):
-    """True if the given browser appears to be running (Windows only)."""
-    proc = _PROC_NAMES.get(browser)
-    if not proc or os.name != "nt":
-        return False
-    try:
-        si = subprocess.STARTUPINFO()
-        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        out = subprocess.run(
-            ["tasklist", "/FI", f"IMAGENAME eq {proc}", "/NH"],
-            capture_output=True, text=True, startupinfo=si, timeout=5,
-        )
-        return proc.lower() in out.stdout.lower()
-    except (OSError, subprocess.SubprocessError):
-        return False
+    """True if the given browser appears to be running (Windows/macOS)."""
+    if sys.platform == "win32":
+        proc = _PROC_NAMES.get(browser)
+        if not proc:
+            return False
+        try:
+            si = subprocess.STARTUPINFO()
+            si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            out = subprocess.run(
+                ["tasklist", "/FI", f"IMAGENAME eq {proc}", "/NH"],
+                capture_output=True, text=True, startupinfo=si, timeout=5,
+            )
+            return proc.lower() in out.stdout.lower()
+        except (OSError, subprocess.SubprocessError):
+            return False
+    if sys.platform == "darwin":
+        proc = _MAC_PROC_NAMES.get(browser)
+        if not proc:
+            return False
+        try:
+            out = subprocess.run(
+                ["pgrep", "-x", proc],
+                capture_output=True, text=True, timeout=5,
+            )
+            return out.returncode == 0 and bool(out.stdout.strip())
+        except (OSError, subprocess.SubprocessError):
+            return False
+    return False
