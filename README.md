@@ -43,12 +43,14 @@ YT7th is for **personal archival only** - saving videos for your own offline use
 
 ## Features
 
+- **Download queue** - paste link after link; each becomes a card and downloads in order, with its own progress, cancel, and quality/format frozen at the moment you added it
+- **Pre-download preview** - every queued link fetches its title, channel, duration, and thumbnail *before* any download starts, so bad links and gated videos fail fast without wasting bandwidth
 - **Quality and format selection at download time** - from 360p up to 4K, or "Best" for whatever the video offers
 - **Single videos and full playlists**
 - **Audio-only extraction** to MP3 or M4A
 - **Subtitle / caption download**
-- **Download history** with one-click "open folder"
-- **Cancel** a download mid-flight
+- **Download history** with one-click **Play** and "open folder"
+- **Cancel** any download mid-flight, or remove queued items before they start
 - **Smart authentication** - public videos download with zero login data sent; your cookies are used only when a video is actually gated (member-only, private, age-restricted), and only after a normal attempt fails
 - **Friendly error messages** - plain language instead of raw stack traces
 - **Dark modern UI** with a left sidebar and dark red accent
@@ -107,9 +109,9 @@ python main.py
 1. **Paste a link** - a single video or a full playlist URL
 2. **Pick quality and format** - or tick **Audio only** for MP3 / M4A
 3. Optionally tick **Include subtitles**
-4. Click **Download**
-5. Watch progress (percentage, speed, ETA). Hit **Cancel** any time
-6. Find past downloads under **History**, with a button to open each file's folder
+4. Click **Download** (or press **Enter**) - the link joins the queue as a card showing its thumbnail, title, and duration, and the field clears for the next paste
+5. Items download one after another with per-card progress (percentage, speed, ETA). Hit a card's **✕** to cancel it or drop it from the queue
+6. Find past downloads under **History**, with buttons to play each file or open its folder
 
 Set your download folder under **Settings**.
 
@@ -147,14 +149,16 @@ To bundle FFmpeg and Deno into the app (so it runs on a clean machine), drop the
 ```
 YT7th/
   main.py            entry point
-  downloader.py      yt-dlp engine, JS runtime detection, smart auth, friendly errors
+  downloader.py      yt-dlp engine, metadata fetch, JS runtime detection, smart auth, friendly errors
+  queue_manager.py   sequential download queue (FIFO worker, per-item lifecycle)
   auth.py            cookie handling (file + browser) and browser-running guard
   data.py            settings (JSON) + history (SQLite)
   list_formats.py    diagnostic: list the formats yt-dlp sees for a URL
   ui/
     app.py           main window + sidebar
-    theme.py         design tokens (colors, fonts, type scale)
-    home.py          download view
+    theme.py         design tokens (colors, fonts, type scale, button styles)
+    home.py          download view (URL input, options, queue)
+    queue_list.py    queue item cards (thumbnail, progress, remove)
     history.py       history view
     settings.py      settings view + credit footer
     messages.py      playful in-app copy

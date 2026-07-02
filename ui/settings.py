@@ -37,8 +37,8 @@ class SettingsView(ctk.CTkFrame):
         self.folder_label.grid(row=1, column=0, sticky="ew", padx=16, pady=(0, 14))
 
         ctk.CTkButton(
-            folder_card, text="Change", width=104, height=36, corner_radius=10,
-            fg_color=theme.ACCENT, hover_color=theme.ACCENT_HOVER, font=theme.BODY,
+            folder_card, text="Change", width=104, height=36,
+            **theme.BTN_PRIMARY, font=theme.BODY,
             command=self._pick_folder,
         ).grid(row=0, column=1, rowspan=2, padx=16)
 
@@ -84,13 +84,13 @@ class SettingsView(ctk.CTkFrame):
         file_row = ctk.CTkFrame(auth_card, fg_color="transparent")
         file_row.grid(row=5, column=0, columnspan=2, sticky="w", padx=16, pady=(0, 14))
         ctk.CTkButton(
-            file_row, text="Choose file", width=110, height=34, corner_radius=10,
-            fg_color=theme.ACCENT, hover_color=theme.ACCENT_HOVER, font=theme.BODY,
+            file_row, text="Choose file", width=110, height=34,
+            **theme.BTN_PRIMARY, font=theme.BODY,
             command=self._pick_cookies,
         ).pack(side="left")
         ctk.CTkButton(
-            file_row, text="Clear", width=70, height=34, corner_radius=10,
-            fg_color=theme.ELEVATED, hover_color=theme.CARD_HOVER, font=theme.BODY,
+            file_row, text="Clear", width=70, height=34,
+            **theme.BTN_GHOST, font=theme.BODY,
             command=self._clear_cookies,
         ).pack(side="left", padx=8)
 
@@ -124,7 +124,7 @@ class SettingsView(ctk.CTkFrame):
                                padx=16, pady=(0, 16))
 
         self.saved = ctk.CTkLabel(
-            self, text="", font=(theme.FONT, 12), text_color=theme.ACCENT,
+            self, text="", font=(theme.FONT, 12), text_color=theme.SUCCESS,
         )
         self.saved.grid(row=3, column=0, sticky="w", pady=12)
 

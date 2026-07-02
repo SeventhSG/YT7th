@@ -81,6 +81,54 @@ def friendly_error(msg):
     return msg.splitlines()[0][:200] if msg else "Something went wrong."
 
 
+def _extract_meta(info):
+    entries = info.get("entries")
+    if entries is not None:
+        entries = [e for e in entries if e]
+        thumbs = info.get("thumbnails") or []
+        return {
+            "title": info.get("title", ""),
+            "channel": info.get("channel") or info.get("uploader", ""),
+            "duration": 0,
+            "thumbnail_url": info.get("thumbnail")
+                             or (thumbs[-1]["url"] if thumbs else ""),
+            "is_playlist": True,
+            "entry_count": len(entries),
+        }
+    return {
+        "title": info.get("title", ""),
+        "channel": info.get("channel") or info.get("uploader", ""),
+        "duration": info.get("duration") or 0,
+        "thumbnail_url": info.get("thumbnail", ""),
+        "is_playlist": False,
+        "entry_count": 1,
+    }
+
+
+def fetch_info(url, settings):
+    """Fetch title/channel/duration/thumbnail without downloading.
+
+    Same auth strategy as Downloader.download: no cookies first, one retry
+    with them if the content is gated and cookies are configured.
+    """
+    def run(use_cookies):
+        opts = {"quiet": True, "no_warnings": True,
+                "extract_flat": "in_playlist"}
+        if use_cookies:
+            opts.update(cookie_opts(settings))
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            return ydl.extract_info(url, download=False)
+
+    try:
+        info = run(use_cookies=False)
+    except Exception as e:  # noqa: BLE001
+        if cookie_opts(settings) and needs_auth(str(e)):
+            info = run(use_cookies=True)
+        else:
+            raise
+    return _extract_meta(info)
+
+
 class Downloader:
     """Wraps yt-dlp. Reports progress through a callback.
 

@@ -1,26 +1,25 @@
-"""Home view: URL input, options, download with progress and cancel."""
-import shutil
-import threading
+"""Home view: URL input, options, and the download queue."""
 import webbrowser
 
 import customtkinter as ctk
 
 import data
 import updater
-from downloader import Downloader, QUALITY_MAP
-from ui import messages, theme
+from downloader import QUALITY_MAP
+from queue_manager import QueueManager
+from ui import theme
+from ui.queue_list import QueueList
 
 VIDEO_FORMATS = ["MP4", "MKV", "WEBM"]
 AUDIO_FORMATS = ["MP3", "M4A"]
-LOW_SPACE_GB = 1.0
 
 
 class HomeView(ctk.CTkFrame):
     def __init__(self, master):
         super().__init__(master, fg_color="transparent")
         self.settings = data.load_settings()
-        self.downloader = None
         self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(4, weight=1)
 
         # Header
         ctk.CTkLabel(self, text="Download", font=theme.H1,
@@ -41,21 +40,24 @@ class HomeView(ctk.CTkFrame):
             border_color=theme.BORDER, corner_radius=10,
         )
         self.url_entry.grid(row=0, column=0, sticky="ew", padx=(16, 10), pady=16)
+        self.url_entry.bind("<Return>", lambda _: self._add())
+        self.url_entry.bind(
+            "<FocusIn>",
+            lambda _: self.url_entry.configure(border_color=theme.ACCENT))
+        self.url_entry.bind(
+            "<FocusOut>",
+            lambda _: self.url_entry.configure(border_color=theme.BORDER))
 
         self.dl_btn = ctk.CTkButton(
-            url_card, text="Download", width=130, height=46, corner_radius=10,
-            fg_color=theme.ACCENT, hover_color=theme.ACCENT_HOVER,
-            font=(theme.FONT, 14, "bold"), command=self._start,
+            url_card, text="Download", width=130, height=46,
+            **theme.BTN_PRIMARY, font=(theme.FONT, 14, "bold"),
+            command=self._add,
         )
-        self.dl_btn.grid(row=0, column=1, padx=(0, 8))
+        self.dl_btn.grid(row=0, column=1, padx=(0, 16))
 
-        self.cancel_btn = ctk.CTkButton(
-            url_card, text="Cancel", width=90, height=46, corner_radius=10,
-            fg_color="transparent", hover_color=theme.ACCENT_SOFT,
-            border_width=1, border_color=theme.DANGER, text_color=theme.DANGER,
-            font=(theme.FONT, 13, "bold"), command=self._cancel,
-        )
-        # shown only while downloading
+        self.url_hint = ctk.CTkLabel(url_card, text="", font=theme.SMALL,
+                                     text_color=theme.DANGER, anchor="w")
+        # gridded only when a hint is shown
 
         # Options card
         opts = ctk.CTkFrame(self, fg_color=theme.CARD, corner_radius=16,
@@ -65,10 +67,10 @@ class HomeView(ctk.CTkFrame):
 
         ctk.CTkLabel(opts, text="QUALITY", text_color=theme.TEXT_FAINT,
                      font=(theme.FONT, 10, "bold")).grid(
-            row=0, column=0, padx=(18, 8), pady=(16, 4), sticky="w")
+            row=0, column=0, padx=(18, 8), pady=(18, 4), sticky="w")
         ctk.CTkLabel(opts, text="FORMAT", text_color=theme.TEXT_FAINT,
                      font=(theme.FONT, 10, "bold")).grid(
-            row=0, column=2, padx=(0, 8), pady=(16, 4), sticky="w")
+            row=0, column=2, padx=(0, 8), pady=(18, 4), sticky="w")
 
         self.quality = ctk.CTkOptionMenu(
             opts, values=list(QUALITY_MAP.keys()), fg_color=theme.ELEVATED,
@@ -77,7 +79,7 @@ class HomeView(ctk.CTkFrame):
         )
         self.quality.set(self.settings.get("quality", "1080p"))
         self.quality.grid(row=1, column=0, columnspan=2, sticky="w",
-                          padx=(18, 16), pady=(0, 16))
+                          padx=(18, 16), pady=(0, 18))
 
         self.fmt = ctk.CTkOptionMenu(
             opts, values=VIDEO_FORMATS, fg_color=theme.ELEVATED,
@@ -85,7 +87,7 @@ class HomeView(ctk.CTkFrame):
             width=140, corner_radius=10, font=theme.BODY,
         )
         self.fmt.set(self.settings.get("format", "MP4"))
-        self.fmt.grid(row=1, column=2, columnspan=2, sticky="w", pady=(0, 16))
+        self.fmt.grid(row=1, column=2, columnspan=2, sticky="w", pady=(0, 18))
 
         self.audio_var = ctk.BooleanVar(value=self.settings.get("audio_only", False))
         ctk.CTkCheckBox(
@@ -102,30 +104,14 @@ class HomeView(ctk.CTkFrame):
             text_color=theme.TEXT, font=theme.BODY, corner_radius=6,
         ).grid(row=2, column=2, columnspan=2, pady=(0, 18), sticky="w")
 
-        # Progress card
-        prog_card = ctk.CTkFrame(self, fg_color=theme.CARD, corner_radius=16,
-                                 border_width=1, border_color=theme.BORDER)
-        prog_card.grid(row=4, column=0, sticky="ew")
-        prog_card.grid_columnconfigure(0, weight=1)
+        # Queue
+        self.queue_list = QueueList(self, on_remove=self._remove_item)
+        self.queue_list.grid(row=4, column=0, sticky="nsew")
 
-        self.status = ctk.CTkLabel(
-            prog_card, text=messages.READY, text_color=theme.TEXT_DIM,
-            font=theme.BODY, anchor="w", justify="left", wraplength=560,
+        self.queue = QueueManager(
+            on_update=self._on_item_update,
+            on_file_done=data.add_history,
         )
-        self.status.grid(row=0, column=0, sticky="ew", padx=16, pady=(14, 8))
-
-        self.progress = ctk.CTkProgressBar(
-            prog_card, height=10, corner_radius=6, progress_color=theme.ACCENT,
-            fg_color=theme.ELEVATED,
-        )
-        self.progress.grid(row=1, column=0, sticky="ew", padx=16)
-        self.progress.set(0)
-
-        self.detail = ctk.CTkLabel(
-            prog_card, text="", text_color=theme.TEXT_FAINT,
-            font=theme.SMALL, anchor="w",
-        )
-        self.detail.grid(row=2, column=0, sticky="ew", padx=16, pady=(6, 14))
 
         # Update banner (hidden until a newer release is found)
         self.update_bar = ctk.CTkFrame(self, fg_color=theme.ACCENT_SOFT,
@@ -139,8 +125,7 @@ class HomeView(ctk.CTkFrame):
         self.update_msg.grid(row=0, column=0, sticky="w", padx=14, pady=8)
         self.update_btn = ctk.CTkButton(
             self.update_bar, text="Download", width=100, height=30,
-            corner_radius=8, fg_color=theme.ACCENT,
-            hover_color=theme.ACCENT_HOVER, font=(theme.FONT, 12, "bold"),
+            **theme.BTN_PRIMARY, font=(theme.FONT, 12, "bold"),
         )
         self.update_btn.grid(row=0, column=1, padx=(0, 6), pady=8)
         ctk.CTkButton(
@@ -188,95 +173,26 @@ class HomeView(ctk.CTkFrame):
         s["subtitles"] = self.subs_var.get()
         return s
 
-    def _free_gb(self, path):
-        try:
-            return shutil.disk_usage(path).free / 1_000_000_000
-        except OSError:
-            return None
-
-    def _start(self):
+    def _add(self):
         url = self.url_entry.get().strip()
         if not url:
-            self.status.configure(text="Please paste a URL first.",
-                                  text_color=theme.DANGER)
+            self._hint("Please paste a URL first.")
             return
-        settings = self._current_settings()
-        free = self._free_gb(settings["download_dir"])
-        if free is not None and free < LOW_SPACE_GB:
-            self.status.configure(
-                text=f"Low disk space ({free:.1f} GB free). Merging may fail - "
-                     "free up space or change the download folder in Settings.",
-                text_color=theme.DANGER,
-            )
-            return
+        self._hint("")
+        self.queue.add(url, self._current_settings())
+        self.url_entry.delete(0, "end")
 
-        self.dl_btn.configure(state="disabled", text="Downloading...")
-        self.cancel_btn.grid(row=0, column=2, padx=(0, 16))
-        self.progress.set(0)
-        self.status.configure(text=messages.starting(), text_color=theme.TEXT_DIM)
-        self.detail.configure(text="")
-        self.downloader = Downloader(
-            progress_cb=self._on_progress, done_cb=self._on_done,
-            error_cb=self._on_error,
-        )
-        threading.Thread(target=self.downloader.download,
-                         args=(url, settings), daemon=True).start()
+    def _hint(self, text):
+        if text:
+            self.url_hint.configure(text=text)
+            self.url_hint.grid(row=1, column=0, columnspan=2, sticky="ew",
+                               padx=16, pady=(0, 10))
+        else:
+            self.url_hint.grid_remove()
 
-    def _cancel(self):
-        if self.downloader:
-            self.downloader.cancel()
-            self.status.configure(text="Cancelling...", text_color=theme.TEXT_DIM)
+    def _remove_item(self, item_id):
+        self.queue.remove(item_id)
 
-    def _reset_buttons(self):
-        self.dl_btn.configure(state="normal", text="Download")
-        self.cancel_btn.grid_remove()
-
-    @staticmethod
-    def _fmt_eta(seconds):
-        if not seconds:
-            return ""
-        m, s = divmod(int(seconds), 60)
-        return f"{m}m {s:02d}s left" if m else f"{s}s left"
-
-    def _on_progress(self, p):
-        def update():
-            self.progress.set(p["percent"] / 100)
-            if p["status"] == "processing":
-                self.status.configure(text="Merging and processing...",
-                                      text_color=theme.TEXT)
-                self.detail.configure(text="Almost there")
-            else:
-                title = p["title"][:60] if p["title"] else "Downloading..."
-                self.status.configure(text=title, text_color=theme.TEXT)
-                speed = p["speed"] / 1_000_000 if p["speed"] else 0
-                eta = self._fmt_eta(p["eta"])
-                bits = [f"{p['percent']:.0f}%"]
-                if speed:
-                    bits.append(f"{speed:.1f} MB/s")
-                if eta:
-                    bits.append(eta)
-                self.detail.configure(text="   -   ".join(bits))
-        self.after(0, update)
-
-    def _on_done(self, title, url, filepath, quality):
-        data.add_history(title, url, filepath, quality)
-
-        def finish():
-            self.progress.set(1)
-            self.status.configure(text=messages.done(), text_color=theme.TEXT)
-            self.detail.configure(text=title[:70])
-            self._reset_buttons()
-        self.after(0, finish)
-
-    def _on_error(self, msg):
-        def show():
-            self._reset_buttons()
-            self.progress.set(0)
-            if msg == "Cancelled":
-                self.status.configure(text="Cancelled. No harm done.",
-                                      text_color=theme.TEXT_DIM)
-                self.detail.configure(text="")
-            else:
-                self.status.configure(text=f"⚠  {msg}", text_color=theme.DANGER)
-                self.detail.configure(text="")
-        self.after(0, show)
+    def _on_item_update(self, item):
+        # Fires on worker threads; marshal to the UI thread.
+        self.after(0, lambda: self.queue_list.upsert(item))

@@ -1,11 +1,23 @@
 """History view: scrollable list of past downloads."""
 import os
 import subprocess
+import sys
 
 import customtkinter as ctk
 
 import data
 from ui import messages, theme
+
+
+def _open_path(path, reveal=False):
+    """Open a file, or reveal its folder, with the OS default handler."""
+    target = os.path.dirname(path) if reveal else path
+    if sys.platform == "win32":
+        os.startfile(target)  # noqa: S606
+    elif sys.platform == "darwin":
+        subprocess.Popen(["open", target])
+    else:
+        subprocess.Popen(["xdg-open", target])
 
 
 class HistoryView(ctk.CTkFrame):
@@ -23,10 +35,8 @@ class HistoryView(ctk.CTkFrame):
         ).grid(row=0, column=0, sticky="w")
 
         ctk.CTkButton(
-            header, text="Clear", width=84, height=34, corner_radius=10,
-            fg_color=theme.CARD, hover_color=theme.ACCENT,
-            border_width=1, border_color=theme.BORDER, font=theme.BODY,
-            command=self._clear,
+            header, text="Clear", width=84, height=34, **theme.BTN_DANGER,
+            font=theme.BODY, command=self._clear,
         ).grid(row=0, column=1, sticky="e")
 
         self.list = ctk.CTkScrollableFrame(self, fg_color="transparent")
@@ -38,10 +48,13 @@ class HistoryView(ctk.CTkFrame):
             w.destroy()
         rows = data.get_history()
         if not rows:
-            ctk.CTkLabel(
-                self.list, text=messages.empty_history(),
-                text_color=theme.TEXT_DIM, font=theme.BODY,
-            ).grid(row=0, column=0, pady=24)
+            empty = ctk.CTkFrame(self.list, fg_color="transparent")
+            empty.grid(row=0, column=0, pady=36)
+            ctk.CTkLabel(empty, text="↻", font=(theme.FONT, 34),
+                         text_color=theme.TEXT_FAINT).pack()
+            ctk.CTkLabel(empty, text=messages.empty_history(),
+                         text_color=theme.TEXT_DIM, font=theme.BODY,
+                         ).pack(pady=(6, 0))
             return
         for i, (title, url, filepath, quality, when) in enumerate(rows):
             self._row(i, title, filepath, quality, when)
@@ -51,6 +64,9 @@ class HistoryView(ctk.CTkFrame):
                             border_width=1, border_color=theme.BORDER_SOFT)
         card.grid(row=i, column=0, sticky="ew", pady=5)
         card.grid_columnconfigure(0, weight=1)
+        card.bind("<Enter>",
+                  lambda _: card.configure(fg_color=theme.CARD_HOVER))
+        card.bind("<Leave>", lambda _: card.configure(fg_color=theme.CARD))
 
         ctk.CTkLabel(
             card, text=title[:70], font=theme.H2,
@@ -64,15 +80,15 @@ class HistoryView(ctk.CTkFrame):
 
         if filepath and os.path.exists(filepath):
             ctk.CTkButton(
-                card, text="Open folder", width=104, height=32, corner_radius=10,
-                fg_color=theme.ELEVATED, hover_color=theme.ACCENT, font=theme.SMALL,
-                command=lambda p=filepath: self._open(p),
-            ).grid(row=0, column=1, rowspan=2, padx=16)
-
-    def _open(self, filepath):
-        folder = os.path.dirname(filepath)
-        if os.path.isdir(folder):
-            subprocess.Popen(["explorer", folder])
+                card, text="Play", width=70, height=32, **theme.BTN_PRIMARY,
+                font=theme.SMALL,
+                command=lambda p=filepath: _open_path(p),
+            ).grid(row=0, column=1, rowspan=2, padx=(16, 0))
+            ctk.CTkButton(
+                card, text="Open folder", width=104, height=32,
+                **theme.BTN_GHOST, font=theme.SMALL,
+                command=lambda p=filepath: _open_path(p, reveal=True),
+            ).grid(row=0, column=2, rowspan=2, padx=(8, 16))
 
     def _clear(self):
         data.clear_history()

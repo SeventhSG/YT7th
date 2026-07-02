@@ -44,6 +44,7 @@ class App(ctk.CTk):
             v.grid_remove()
 
         self.show("home")
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
 
     def _build_sidebar(self):
         bar = ctk.CTkFrame(self, width=104, corner_radius=0, fg_color=theme.SIDEBAR)
@@ -61,18 +62,28 @@ class App(ctk.CTk):
                          text_color=theme.ACCENT).pack(pady=(26, 30))
 
         self.nav_buttons = {}
+        self.nav_marks = {}
         items = [("home", "Home", "⌂"),
                  ("history", "History", "↻"),
                  ("settings", "Settings", "⚙")]
         for key, label, icon in items:
+            row = ctk.CTkFrame(bar, fg_color="transparent")
+            row.pack(pady=5, padx=4, fill="x")
+            mark = ctk.CTkFrame(row, width=3, height=44, corner_radius=2,
+                                fg_color=theme.SIDEBAR)
+            mark.pack(side="left", padx=(0, 3))
             btn = ctk.CTkButton(
-                bar, text=f"{icon}\n{label}", width=84, height=58,
+                row, text=f"{icon}\n{label}", width=84, height=58,
                 corner_radius=14, fg_color="transparent",
                 hover_color=theme.CARD_HOVER, text_color=theme.TEXT_DIM,
                 font=(theme.FONT, 12), command=lambda k=key: self.show(k),
             )
-            btn.pack(pady=5, padx=10)
+            btn.pack(side="left")
             self.nav_buttons[key] = btn
+            self.nav_marks[key] = mark
+
+        ctk.CTkLabel(bar, text=f"v{__version__}", font=theme.SMALL,
+                     text_color=theme.TEXT_FAINT).pack(side="bottom", pady=14)
 
     def show(self, key):
         for v in self.views.values():
@@ -81,10 +92,16 @@ class App(ctk.CTk):
         if hasattr(self.views[key], "on_show"):
             self.views[key].on_show()
         for k, btn in self.nav_buttons.items():
-            if k == key:
-                btn.configure(fg_color=theme.ACCENT_SOFT, text_color=theme.TEXT)
-            else:
-                btn.configure(fg_color="transparent", text_color=theme.TEXT_DIM)
+            active = k == key
+            btn.configure(
+                fg_color=theme.ACCENT_SOFT if active else "transparent",
+                text_color=theme.TEXT if active else theme.TEXT_DIM)
+            self.nav_marks[k].configure(
+                fg_color=theme.ACCENT if active else theme.SIDEBAR)
+
+    def _on_close(self):
+        self.views["home"].queue.shutdown()
+        self.destroy()
 
 
 def run():
