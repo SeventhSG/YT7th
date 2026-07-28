@@ -134,8 +134,16 @@ def build_ui():  # pragma: no cover - requires Resolve's UI runtime
     win.Hide()
 
 
-if __name__ == "__main__":
-    if resolve is None or fusion is None:
-        print("This script must be run from inside DaVinci Resolve.")
-    else:
-        build_ui()
+def _run():
+    if resolve is None or fusion is None or bmd is None:
+        print("YT7th: run this from inside DaVinci Resolve Studio. The Fusion "
+              "UI Manager used by this panel is Studio-only (since Resolve 19.1).")
+        return
+    build_ui()
+
+
+# Resolve's Scripts menu executes this file directly, NOT as __main__, so a
+# `if __name__ == "__main__"` guard would never fire and no window would open.
+# Call the entry point at load time instead; it is guarded by resolve/fusion
+# availability, so importing this module outside Resolve is a harmless no-op.
+_run()

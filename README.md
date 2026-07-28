@@ -157,7 +157,9 @@ To bundle FFmpeg and Deno into the app (so it runs on a clean machine), drop the
 
 Each release also ships `YT7th-Resolve-windows.zip` / `YT7th-Resolve-macos.zip` - a self-contained plugin that downloads a YouTube URL and drops the clip straight into your Resolve Media Pool (optionally appending it to the current timeline).
 
-**Install**
+> **Requires DaVinci Resolve Studio.** As of Resolve 19.1 (Nov 2024) the scripting API - which this plugin relies on to import media - is Studio-only. On the **free** edition Resolve has no working scripting bridge, so this plugin cannot run there. Free-edition users: download with the standalone YT7th app and drag the file into your Media Pool by hand.
+
+**Install** (Resolve Studio)
 
 1. Unzip the plugin folder into Resolve's scripts directory:
    - Windows: `%APPDATA%\Blackmagic Design\DaVinci Resolve\Support\Fusion\Scripts\Utility\`
