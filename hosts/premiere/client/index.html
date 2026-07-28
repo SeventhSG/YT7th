@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>YT7th</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  <div class="panel">
+    <h1>YT7th</h1>
+    <p class="sub">Download a video into this project.</p>
+
+    <input id="url" type="text" placeholder="https://youtube.com/watch?v=..."/>
+
+    <div class="row">
+      <label>Quality
+        <select id="quality"></select>
+      </label>
+      <label>Format
+        <select id="format"></select>
+      </label>
+    </div>
+
+    <label class="check"><input id="audioOnly" type="checkbox"/> Audio only</label>
+    <label class="check"><input id="append" type="checkbox" checked/> Append to active sequence</label>
+
+    <button id="download">Download</button>
+    <div id="status" class="status">Ready.</div>
+  </div>
+
+  <script src="CSInterface.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

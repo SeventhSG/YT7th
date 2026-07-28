@@ -1,7 +1,7 @@
 """fetch_info: metadata without downloading, with the same auth retry."""
 import pytest
 
-import downloader
+from yt7th_engine import downloader
 
 
 class FakeYDL:

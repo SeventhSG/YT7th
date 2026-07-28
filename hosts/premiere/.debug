@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Enables remote debugging of the panel during development.
+     Open the listed port in a Chromium browser while the panel runs. -->
+<ExtensionList>
+  <Extension Id="com.seventh.yt7th.premiere.panel">
+    <HostList>
+      <Host Name="PPRO" Port="8088"/>
+    </HostList>
+  </Extension>
+</ExtensionList>

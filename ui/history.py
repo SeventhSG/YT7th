@@ -5,7 +5,7 @@ import sys
 
 import customtkinter as ctk
 
-import data
+from yt7th_engine import data
 from ui import messages, theme
 
 

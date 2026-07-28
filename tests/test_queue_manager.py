@@ -2,7 +2,7 @@
 import threading
 import time
 
-from queue_manager import QueueManager
+from yt7th_engine.queue_manager import QueueManager
 
 
 def wait_for(pred, timeout=2.0):

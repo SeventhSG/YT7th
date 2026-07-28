@@ -4,8 +4,8 @@ from tkinter import filedialog
 
 import customtkinter as ctk
 
-import data
-from auth import SUPPORTED_BROWSERS, browser_running
+from yt7th_engine import data
+from yt7th_engine.auth import SUPPORTED_BROWSERS, browser_running
 from ui import theme
 
 

@@ -1,6 +1,6 @@
 import sys
 import subprocess
-import auth
+from yt7th_engine import auth
 
 
 def test_browser_running_macos_true(monkeypatch):

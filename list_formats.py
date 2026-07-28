@@ -5,8 +5,8 @@ import sys
 
 import yt_dlp
 
-import data
-from auth import cookie_opts
+from yt7th_engine import data
+from yt7th_engine.auth import cookie_opts
 
 
 def main():

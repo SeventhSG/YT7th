@@ -14,7 +14,13 @@ datas = [("assets", "assets")]
 if os.path.isdir("bin"):
     datas.append(("bin", "bin"))
 binaries = []
-hiddenimports = ["customtkinter"]
+hiddenimports = [
+    "customtkinter",
+    # Engine daemon modules are reached via a lazy `--serve` import in main.py.
+    "yt7th_engine.server",
+    "yt7th_engine.service",
+    "yt7th_engine.queue_manager",
+]
 
 # Bundle data files and submodules these packages load at runtime.
 for pkg in ("yt_dlp", "yt_dlp_ejs", "customtkinter"):

@@ -3,7 +3,7 @@ import shutil
 import threading
 from dataclasses import dataclass, field
 
-import downloader
+from . import downloader
 
 LOW_SPACE_GB = 1.0
 
@@ -33,6 +33,7 @@ class QueueItem:
     status: str = "fetching"
     metadata: dict = field(default_factory=dict)
     progress: dict = field(default_factory=dict)
+    files: list = field(default_factory=list)  # output paths, in finish order
     error: str = ""
 
 
@@ -142,7 +143,7 @@ class QueueManager:
                 item.status = "downloading"
                 dl = self._factory(
                     progress_cb=lambda p, i=item: self._on_progress(i, p),
-                    done_cb=self._file_done,
+                    done_cb=lambda *a, i=item: self._file_done(i, *a),
                     error_cb=lambda msg, i=item: self._on_error(i, msg),
                 )
                 self._active_downloader = dl
@@ -160,7 +161,10 @@ class QueueManager:
             item.progress = p
         self._notify(item)
 
-    def _file_done(self, title, url, filepath, quality):
+    def _file_done(self, item, title, url, filepath, quality):
+        if filepath:
+            with self._cond:
+                item.files.append(filepath)
         if self._on_file_done:
             self._on_file_done(title, url, filepath, quality)
 

@@ -3,10 +3,10 @@ import webbrowser
 
 import customtkinter as ctk
 
-import data
 import updater
-from downloader import QUALITY_MAP
-from queue_manager import QueueManager
+from yt7th_engine import data
+from yt7th_engine.downloader import QUALITY_MAP
+from yt7th_engine.queue_manager import QueueManager
 from ui import theme
 from ui.queue_list import QueueList
 

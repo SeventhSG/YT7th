@@ -1,6 +1,6 @@
 import os
-import downloader
-import resources
+from yt7th_engine import downloader
+from yt7th_engine import resources
 
 
 def test_build_opts_sets_ffmpeg_location_when_bundled(monkeypatch, tmp_path):

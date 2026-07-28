@@ -3,7 +3,7 @@ import importlib
 
 
 def test_resource_path_joins_under_root(monkeypatch):
-    import resources
+    from yt7th_engine import resources
     importlib.reload(resources)
     p = resources.resource_path("assets", "logo.png")
     assert p.endswith(os.path.join("assets", "logo.png"))
@@ -11,7 +11,7 @@ def test_resource_path_joins_under_root(monkeypatch):
 
 
 def test_bootstrap_prepends_bin_to_path(monkeypatch, tmp_path):
-    import resources
+    from yt7th_engine import resources
     importlib.reload(resources)
     bin_path = tmp_path / "bin"
     bin_path.mkdir()
@@ -23,7 +23,7 @@ def test_bootstrap_prepends_bin_to_path(monkeypatch, tmp_path):
 
 
 def test_bootstrap_noop_without_bin(monkeypatch, tmp_path):
-    import resources
+    from yt7th_engine import resources
     importlib.reload(resources)
     monkeypatch.setattr(resources, "bin_dir", lambda: str(tmp_path / "nope"))
     before = os.environ.get("PATH", "")

@@ -20,8 +20,12 @@ jobs:
         include:
           - os: windows-latest
             artifact: YT7th-windows.zip
+            resolve_artifact: YT7th-Resolve-windows.zip
+            premiere_artifact: YT7th-Premiere-windows.zip
           - os: macos-14
             artifact: YT7th-macos.zip
+            resolve_artifact: YT7th-Resolve-macos.zip
+            premiere_artifact: YT7th-Premiere-macos.zip
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     steps:
@@ -32,10 +36,19 @@ jobs:
           python-version: "3.11"
 
       - name: Install deps
-        run: python -m pip install -r requirements.txt pyinstaller
+        run: python -m pip install -r requirements.txt pyinstaller pytest
 
       - name: Smoke import
-        run: python -c "import data, auth, resources, updater, downloader, version"
+        run: >
+          python -c "import version, updater;
+          from yt7th_engine import data, auth, resources, downloader, queue_manager, server, service;
+          import hosts.common.engine_client, hosts.resolve.importer, hosts.resolve.resolve_host"
+
+      - name: Run tests
+        run: python -m pytest -q
+
+      - name: Test Premiere client (Node)
+        run: node --test hosts/premiere/client/engine.test.js
 
       - name: Fetch ffmpeg, ffprobe, deno (Windows)
         if: runner.os == 'Windows'
@@ -88,14 +101,83 @@ jobs:
         if: runner.os == 'macOS'
         run: ditto -c -k --keepParent dist/YT7th.app ${{ matrix.artifact }}
 
+      # --- DaVinci Resolve plugin: hosts/ source + the engine binary ---
+      # Layout: <root>/hosts/{common,resolve}  and  <root>/engine/<binary>.
+      # engine_client.connect() auto-launches <root>/engine/YT7th[.exe|.app]
+      # with --serve. Install by dropping the whole folder under Resolve's
+      # Fusion/Scripts/Utility, then run hosts/resolve/YT7th.py.
+      - name: Package Resolve plugin (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $p = "YT7th-Resolve"
+          New-Item -ItemType Directory -Force "$p/hosts", "$p/engine" | Out-Null
+          Copy-Item hosts/__init__.py "$p/hosts/"
+          Copy-Item -Recurse hosts/common, hosts/resolve "$p/hosts/"
+          Copy-Item -Recurse dist/YT7th/* "$p/engine/"
+          Get-ChildItem -Recurse "$p" -Include __pycache__ -Directory |
+            Remove-Item -Recurse -Force
+          Compress-Archive -Path "$p/*" -DestinationPath ${{ matrix.resolve_artifact }}
+
+      - name: Package Resolve plugin (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          p="YT7th-Resolve"
+          mkdir -p "$p/hosts" "$p/engine"
+          cp hosts/__init__.py "$p/hosts/"
+          cp -R hosts/common hosts/resolve "$p/hosts/"
+          cp -R dist/YT7th.app "$p/engine/"
+          find "$p" -name __pycache__ -type d -prune -exec rm -rf {} +
+          ditto -c -k --keepParent "$p" ${{ matrix.resolve_artifact }}
+
+      # --- Premiere CEP panel: the extension folder + the engine binary ---
+      # Unzips to  com.seventh.yt7th.premiere/  ready to drop into Adobe's
+      # CEP/extensions folder; engine_client (engine.js) auto-launches
+      # engine/YT7th[.exe|.app] --serve.
+      - name: Package Premiere plugin (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $e = "com.seventh.yt7th.premiere"
+          New-Item -ItemType Directory -Force "$e/engine" | Out-Null
+          Copy-Item -Recurse hosts/premiere/CSXS, hosts/premiere/client, hosts/premiere/host "$e/"
+          Copy-Item hosts/premiere/.debug, hosts/premiere/README.md "$e/"
+          Remove-Item "$e/client/engine.test.js" -ErrorAction SilentlyContinue
+          Copy-Item -Recurse dist/YT7th/* "$e/engine/"
+          Compress-Archive -Path "$e" -DestinationPath ${{ matrix.premiere_artifact }}
+
+      - name: Package Premiere plugin (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          e="com.seventh.yt7th.premiere"
+          mkdir -p "$e/engine"
+          cp -R hosts/premiere/CSXS hosts/premiere/client hosts/premiere/host "$e/"
+          cp hosts/premiere/.debug hosts/premiere/README.md "$e/"
+          rm -f "$e/client/engine.test.js"
+          cp -R dist/YT7th.app "$e/engine/"
+          ditto -c -k --keepParent "$e" ${{ matrix.premiere_artifact }}
+
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.artifact }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.resolve_artifact }}
+          path: ${{ matrix.resolve_artifact }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.premiere_artifact }}
+          path: ${{ matrix.premiere_artifact }}
 
       - name: Attach to release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           token: ${{ secrets.RELEASE_TOKEN || github.token }}
-          files: ${{ matrix.artifact }}
+          files: |
+            ${{ matrix.artifact }}
+            ${{ matrix.resolve_artifact }}
+            ${{ matrix.premiere_artifact }}

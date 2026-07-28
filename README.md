@@ -31,6 +31,8 @@ Built with Python, yt-dlp, and customtkinter.
 - [How to use](#how-to-use)
 - [Authentication (member-only and private videos)](#authentication-member-only-and-private-videos)
 - [Build a standalone app](#build-a-standalone-app)
+- [DaVinci Resolve plugin](#davinci-resolve-plugin)
+- [Premiere Pro plugin](#premiere-pro-plugin)
 - [Project layout](#project-layout)
 - [Troubleshooting](#troubleshooting)
 - [FAQ](#faq)
@@ -57,6 +59,13 @@ YT7th is for **personal archival only** - saving videos for your own offline use
 - **Low disk space guard** - warns before a merge would fail
 - **In-app update notifier** - tells you when a newer release is out
 - **Packaged for Windows and macOS** with **FFmpeg and a JS runtime bundled** - the prebuilt apps run on a clean machine, nothing else to install
+
+### New in v0.7 - editor plugins
+
+- **DaVinci Resolve plugin** - paste a URL in a Resolve panel and the clip lands in your **Media Pool**, optionally appended to the current timeline
+- **Premiere Pro plugin** - a CEP panel that downloads a URL and imports it into the current project, optionally appended to the active sequence
+- **Shared engine** - both plugins (and the desktop app) run on one UI-agnostic core exposed as a headless, token-guarded `127.0.0.1` HTTP daemon; the plugins **auto-launch** the bundled engine on first use, so nothing off your machine is ever exposed and there's no separate app to keep open
+- **Self-contained plugin builds** - each release ships plugin zips that bundle their own engine (FFmpeg + JS runtime included), so the plugins work on a clean machine
 
 ## Download (Windows & macOS)
 
@@ -144,15 +153,45 @@ On Windows the packaged app appears in `dist/YT7th/`; on macOS you get `dist/YT7
 
 To bundle FFmpeg and Deno into the app (so it runs on a clean machine), drop the matching executables into a top-level `bin/` directory before building - `ffmpeg`, `ffprobe`, `deno` (add `.exe` on Windows). This is exactly what the GitHub Actions release workflow (`.github/workflows/release.yml`) does automatically for both platforms; pushing a `vX.Y.Z` tag builds and publishes both downloads.
 
+## DaVinci Resolve plugin
+
+Each release also ships `YT7th-Resolve-windows.zip` / `YT7th-Resolve-macos.zip` - a self-contained plugin that downloads a YouTube URL and drops the clip straight into your Resolve Media Pool (optionally appending it to the current timeline).
+
+**Install**
+
+1. Unzip the plugin folder into Resolve's scripts directory:
+   - Windows: `%APPDATA%\Blackmagic Design\DaVinci Resolve\Support\Fusion\Scripts\Utility\`
+   - macOS: `~/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/Scripts/Utility/`
+2. In Resolve, run **Workspace → Scripts → YT7th → hosts → resolve → YT7th**.
+3. Paste a URL, pick quality/format, and hit **Download**.
+
+The plugin bundles its own engine (`engine/`) and auto-launches it on first use - no separate app needs to be running. It talks to the engine over a token-guarded `127.0.0.1` HTTP daemon, so nothing is exposed off your machine. (Advanced: point `YT7TH_ENGINE_CMD` at your own engine command to override the bundled one.)
+
+## Premiere Pro plugin
+
+Releases also ship `YT7th-Premiere-windows.zip` / `YT7th-Premiere-macos.zip` - a CEP panel that downloads a URL and imports the clip into the current Premiere project, optionally appending it to the active sequence.
+
+**Install:** unzip the `com.seventh.yt7th.premiere` folder into Adobe's CEP extensions folder (`%APPDATA%\Adobe\CEP\extensions\` on Windows, `~/Library/Application Support/Adobe/CEP/extensions/` on macOS), then open **Window → Extensions → YT7th** in Premiere.
+
+It shares the exact same engine daemon as the Resolve plugin - the panel's Node client finds or auto-launches the bundled engine and drives it over the same HTTP API. Full details and dev setup: [`hosts/premiere/README.md`](hosts/premiere/README.md).
+
 ## Project layout
 
 ```
 YT7th/
-  main.py            entry point
-  downloader.py      yt-dlp engine, metadata fetch, JS runtime detection, smart auth, friendly errors
-  queue_manager.py   sequential download queue (FIFO worker, per-item lifecycle)
-  auth.py            cookie handling (file + browser) and browser-running guard
-  data.py            settings (JSON) + history (SQLite)
+  main.py            entry point (default UI; `--serve` runs the headless engine)
+  yt7th_engine/      UI-agnostic core, shared by the app and the editor plugins
+    downloader.py    yt-dlp engine, metadata fetch, JS runtime detection, smart auth, friendly errors
+    queue_manager.py sequential download queue (FIFO worker, per-item lifecycle)
+    auth.py          cookie handling (file + browser) and browser-running guard
+    data.py          settings (JSON) + history (SQLite)
+    resources.py     locate bundled ffmpeg/ffprobe/deno
+    server.py        localhost HTTP daemon over the queue (token-guarded)
+    service.py       engine daemon lifecycle (state file, auto-launch, health)
+  hosts/             editor-host plugins that talk to the engine daemon
+    common/          engine_client.py (HTTP client + auto-launch), importer.py, job_runner.py
+    resolve/         DaVinci Resolve plugin (UIManager panel, Media Pool import)
+    premiere/        Premiere Pro CEP panel (Node client + ExtendScript import)
   list_formats.py    diagnostic: list the formats yt-dlp sees for a URL
   ui/
     app.py           main window + sidebar

@@ -10,7 +10,7 @@ def _reload_data(monkeypatch, platform, home, appdata=None):
         monkeypatch.setenv("APPDATA", str(appdata))
     else:
         monkeypatch.delenv("APPDATA", raising=False)
-    import data
+    from yt7th_engine import data
     return importlib.reload(data)
 
 

@@ -5,8 +5,8 @@ from pathlib import Path
 
 import yt_dlp
 
-import resources
-from auth import cookie_opts
+from . import resources
+from .auth import cookie_opts
 
 # JS runtimes yt-dlp can use to solve YouTube's signature/n challenge.
 # Without one, YouTube returns only image storyboards. Preference order.
