@@ -42,7 +42,8 @@ jobs:
         run: >
           python -c "import version, updater;
           from yt7th_engine import data, auth, resources, downloader, queue_manager, server, service;
-          import hosts.common.engine_client, hosts.resolve.importer, hosts.resolve.resolve_host"
+          import hosts.common.engine_client, hosts.common.importer, hosts.common.job_runner;
+          import hosts.resolve.resolve_host, hosts.resolve.YT7th"
 
       - name: Run tests
         run: python -m pytest -q
